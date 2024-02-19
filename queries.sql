@@ -1,114 +1,119 @@
---Lists the 5 most expensive orders in 2023
-SELECT * FROM "Orders"
-WHERE ("orderDate" BETWEEN "2023-01-01" AND "2023-12-31") AND "orderStatus" = "delivered"
-ORDER BY "totalPrice" DESC limit 5;
+--lists deleted customers
+SELECT * FROM "Customers" 
+WHERE "deleted" = 1;
 
---It lists the number of days of leave used by employees on leave and employee information.
-SELECT "Employees"."id", "Employees"."name", "Employees"."surname", "Annual_Leave"."annualLeaveUsed" FROM "Annual_Leave"
-INNER JOIN "Employees" ON "Annual_Leave"."employeeId" = "Employees"."id"
-WHERE "Employees"."workingStatus" = "annual leave";
-
---Lists employee compensation information based on employee information
-SELECT * FROM "Indemnity"
-WHERE "employeeId" = (
-    SELECT "id" FROM "Employees"
-    WHERE "name" = "Gabriel" AND "surname" = "Phillips"
-);
-
---Lists the 5 employees with the highest sales in 2022
-SELECT "Employees"."name",SUM("Employees"."numberofSales") AS "total sales" FROM "Employees"
-INNER JOIN "Orders" ON "Employees"."id" = "Orders"."employeeId"
-WHERE "Orders"."orderDate" BETWEEN "2022-01-01" AND 2022-12-31
-GROUP BY "Employees"."name"
-ORDER BY "total sales" DESC lIMIT 5;
-
---Lists employees who are on leave
+--lists departed employees
 SELECT * FROM "Employees"
-WHERE "workingStatus" = "annual leave";
+WHERE "workingStatus" = 'terminated';
 
---Lists employees in the electronics team
-SELECT * FROM "Employees"
-WHERE "teamId" = (
-    SELECT "id" FROM "Teams"
-    WHERE "name" = "electronics team"
-);
+--The employee who placed the most orders was listed
+SELECT "employeeId", "Employees"."name","Employees"."surname", COUNT("employeeId") AS 'number of sales' FROM "Orders"
+JOIN "Employees" ON "Orders"."employeeId" = "Employees"."id"
+GROUP BY "employeeId"
+ORDER BY "number of sales" DESC LIMIT 1;
 
---Lists all employees with electronic engineer positions
-SELECT * FROM "Employees"
-WHERE "jobPositionId" = (
-    SELECT "id" FROM "JobPositions" 
-    WHERE "name" = "Electronics Engineer"
-);
-
---Lists the names of teams in the home appliance department
-SELECT "name" FROM "Teams"
-WHERE "DepartmentId" = (
-    SELECT "id" FROM "Departments"
-    WHERE "name" = "Household appliances"
-);
-
---Lists the name of departments at Electronics Store NY
-SELECT "name" FROM "Departments"
-WHERE "shopId" = (
-    SELECT "id" FROM "Shops"
-    WHERE "name" = "Electronics Store NY"
-);
-
---Lists active stores in New York
-SELECT * FROM "Shops"
+--Lists stores in San Francisco
+SELECT * FROM Shops 
 WHERE "cityId" IN (
-    SELECT "id" FROM "Cities"
-    WHERE "name" = "New York"
-) AND "shopStatus" = "active";
+    SELECT "id" FROM "cities"
+    WHERE "name" = 'San Francisco'
+);
 
---Lists products in the technology category
+--Products from the Computer category are listed
 SELECT * FROM "Products"
-WHERE "categoryId" = (
-    SELECT "id" FROM "Categories"
-    WHERE "name" = "technology"
+WHERE "categoryId" IN (
+    SELECT "id" FROM "categories"
+    WHERE "name" = 'Computer'
 );
 
---Find all all orders given customer name and surname
+--Lists employees in the Mobile Phones and Accessories department
+SELECT * FROM "Employees"
+WHERE "departmentId" IN (
+    SELECT "id" FROM "departments"
+    WHERE "name" = 'Mobile Phones and Accessories'
+);
+
+--Lists the total number of leaves used by the employee whose ID number is entered
+SELECT SUM("annualLeaveUsed") AS 'total used permission
+' FROM "Annual_Leave"
+WHERE "employeeId" IN (
+    SELECT "id" FROM "Employees"
+    WHERE "identificationNumber" = 16666
+);
+
+--Lists products that are not on sale
+SELECT * FROM "Products"
+WHERE "productStatus" != 'sale';
+
+--Lists orders placed by store name
 SELECT * FROM "Orders"
-WHERE "customerId" IN (
-    SELECT "id" FROM "Customers"
-    WHERE "name" = "Carson" AND "surname" = "Bennett"
-);
-
---Lists city and store information (View)
-SELECT * FROM "shop_city";
-
---Returns employee compensation information for the given employee information (View)
-SELECT * FROM "employee_indemnity"
-WHERE "employee_id" = (
-    SELECT "id" FROM "Employees"
-    WHERE "name" = "Harper" AND "surname" = "Wright"
-);
-
---Lists products and category information sold in Game and Entertainment Systems (View)
-SELECT * FROM "product_category"
-WHERE "category_name" = (
-    SELECT "id" FROM "Categories"
-    WHERE "name" = "Game and Entertainment Systems"
-);
-
---Shows team department information in the city of Oswego (View)
-SELECT * FROM "team_department_city"
-WHERE "city_id" = (
-    SELECT "id" FROM "Cities"
-    WHERE "name" = "Oswego"
-);
-
---Shows information about a specific user (View)
-SELECT * FROM "employee_information"
-WHERE "employee_id" = (
-    SELECT "id" FROM "Employees"
-    WHERE "name" = "Zoey" AND "surname" = "Jenkins"
-);
-
---Lists orders received from the "Electronics Store Owg" store (View)
-SELECT * FROM "order_imformation"
-WHERE "shop_id" = (
+WHERE "shopId" IN (
     SELECT "id" FROM "Shops"
-    WHERE "name" = "Electronics Store Owg"
+    WHERE "name" = 'Techno New York'
 );
+
+--Shows the products ordered by the customer by name and surname
+SELECT * FROM Order_Item
+WHERE "orderId" IN (
+    SELECT "id" FROM "Orders"
+    WHERE "customerId" IN (
+        SELECT "id" FROM "Customers"
+        WHERE "name" = 'Olivia' AND "surname" = 'Johnson'
+    )
+);
+
+--Shows employees working in job positions
+SELECT * FROM "Employees"
+WHERE "jobPositionId" IN (
+    SELECT "id" FROM "JobPositions"
+    WHERE "name" = 'Sales Representative'
+) AND "workingStatus" = 'work';
+
+--Provides compensation information for the employee whose ID number is entered)
+SELECT * FROM "Indemnity"
+WHERE employeeId = (
+    SELECT "id" FROM "Employees"
+    WHERE "identificationNumber" = '1332222222'
+);
+
+--Shows the contents of order number 3 (View)
+SELECT * FROM "order_content"
+WHERE "order_id" IN (
+    SELECT "id" FROM "Orders"
+    WHERE "id" = 3
+);
+
+--Lists total cost by order number (View)
+SELECT * FROM "order_totalprice"
+WHERE "order_id" IN (
+    SELECT "id" FROM "Orders"
+    WHERE "id" = 3
+);
+
+--Lists stores when city information is given (View)
+SELECT * FROM "shop_city"
+WHERE "city_name" = 'New York';
+
+--Collect lists of employees who have not left their jobs by employee ID
+SELECT * FROM "employee_information"
+WHERE "employee_id" = 6;
+
+--Lists information by order number (View)
+SELECT * FROM "order_information"
+WHERE "order_id" = 3;
+
+--Lists the products of the entered brand (View)
+SELECT * FROM  "product_details"
+WHERE "trademark_name" = 'Sony';
+
+--Lists products when given category name (View)
+SELECT * FROM "product_details"
+WHERE "category_name" = 'Phone';
+
+--Shows the compensation information of the employee whose employee number is entered
+SELECT * FROM "employee_indemnity"
+WHERE "employee_id" = 1;
+
+--Shows permission information based on the entered ID
+SELECT * FROM "employee_annualleave"
+WHERE "employee_id" = 6;

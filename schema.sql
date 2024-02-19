@@ -1,31 +1,41 @@
+--To enable foreign key
+PRAGMA foreign_keys = ON;
+
 --represents customer information
 CREATE TABLE Customers(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "identificationNumber" TEXT UNIQUE NOT NULL CHECK("identificationNumber" GLOB '*[0-9]*'), 
     "name" VARCHAR(40) NOT NULL,
     "surname" VARCHAR(20) NOT NULL,
-    "phoneNumber" TEXT NOT NULL,
-    "email" TEXT NOT NULL CHECK("email" LIKE '%@%'),
-    "point" INTEGER DEFAULT 0 NOT NULL CHECK("point" >= 0),
+    "phoneNumber" TEXT NOT NULL UNIQUE CHECK("phoneNumber" GLOB '*[0-9]*'),
+    "email" TEXT NOT NULL UNIQUE CHECK("email" LIKE '%@%'),
+    "address" NVARCHAR(70) NOT NULL,
     "deleted" INTEGER DEFAULT 0 NOT NULL CHECK("deleted" BETWEEN 0 AND 1)
+);
+
+--Represents product trademarks
+CREATE TABLE Trademarks(
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "name" VARCHAR(50) NOT NULL UNIQUE
 );
 
 --Represents product categories
 CREATE TABLE Categories(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" VARCHAR(50) NOT NULL
+    "name" VARCHAR(50) NOT NULL UNIQUE
 );
 
 --Represents products sold
-CREATE TABLE Products(
+CREATE TABLE  Products(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" VARCHAR(100) NOT NULL,
+    "name" VARCHAR(50) NOT NULL,
     "stock" INTEGER NOT NULL CHECK("stock" >= 0),
-    "trademark" NVARCHAR(30) NOT NULL,   
-    "price" NUMERIC NOT NULL CHECK("price" >= 0),
     "categoryId" INTEGER NOT NULL,
+    "trademarkId" INTEGER NOT NULL,   
+    "price" NUMERIC NOT NULL CHECK("price" > 0),
     "productStatus" VARCHAR(20) NOT NULL CHECK("productStatus" IN ('sale','not on sale','stock expected')),
-    FOREIGN KEY("categoryId") REFERENCES Categories("id")
+    FOREIGN KEY("trademarkId") REFERENCES Trademarks("id"),
+    FOREIGN KEY("categoryId") REFERENCES categories("id"),
+    CONSTRAINT unique_product_trademark UNIQUE ("trademarkId", "name")
 );
 
 --represents cities
@@ -37,32 +47,22 @@ CREATE TABLE Cities(
 --represents Shops
 CREATE TABLE Shops(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" VARCHAR(100) NOT NULL,
+    "name" VARCHAR(50) NOT NULL,
     "cityId" INTEGER NOT NULL,
-    "shopStatus" VARCHAR(20) NOT NULL CHECK("shopStatus" IN('active', 'repair','not active')),
+    "shopStatus" VARCHAR(12) NOT NULL CHECK("shopStatus" IN('active', 'repair','not active')),
     FOREIGN KEY("cityId") REFERENCES Cities("id")
 );
 
 --Represents departments in the store
 CREATE TABLE Departments(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" VARCHAR(50) NOT NULL,
-    "shopId" INTEGER NOT NULL,
-    FOREIGN KEY("shopId") REFERENCES Shops("id")
-);
-
---Represents working teams
-CREATE TABLE Teams(
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" VARCHAR(50) NOT NULL,
-    "DepartmentId" INTEGER NOT NULL,
-    FOREIGN KEY("DepartmentId") REFERENCES "Departments"("id")
+    "name" VARCHAR(30) NOT NULL
 );
 
 --represents job positions
 CREATE TABLE JobPositions(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "name" VARCHAR(30) NOT NULL
+    "name" VARCHAR(50) NOT NULL UNIQUE
 );
 
 --represents employees
@@ -71,20 +71,20 @@ CREATE TABLE Employees(
     "identificationNumber" TEXT UNIQUE NOT NULL CHECK("identificationNumber" GLOB '*[0-9]*'),
     "name" VARCHAR(50) NOT NULL,
     "surname" VARCHAR(50) NOT NULL,
-    "gender" VARCHAR(6) NOT NULL,
-    "phoneNumber" TEXT NOT NULL,
-    "email" TEXT NOT NULL CHECK("email" LIKE '%@%'),
-    "cityId" INTEGER NOT NULL,
+    "gender" VARCHAR(15) NOT NULL,
+    "phoneNumber" TEXT NOT NULL UNIQUE,
+    "email" TEXT NOT NULL UNIQUE CHECK("email" LIKE '%@%'),
+    "address" VARCHAR(70) NOT NULL,
     "jobPositionId" INTEGER NOT NULL,
-    "teamId" INTEGER NOT NULL,
+    "departmentId" INTEGER NOT NULL,
+    "shopId" INTEGER NOT NULL,
     "startDate" DATE NOT NULL DEFAULT CURRENT_DATE,
-    "numberofSales" INTEGER NOT NULL DEFAULT 0 CHECK("numberofSales" >= 0),
-    "salary" NUMERIC NOT NULL CHECK("salary" >= 0),
+    "salary" NUMERIC NOT NULL CHECK("salary" > 0),
     "annualLeave" INTEGER NOT NULL DEFAULT 0,
-    "workingStatus" VARCHAR(10) NOT NULL CHECK("workingStatus" IN ('work','annual leave','terminated')),
-    FOREIGN KEY("cityId") REFERENCES Cities("id"),
+    "workingStatus" VARCHAR(10) NOT NULL DEFAULT 'work' CHECK("workingStatus" IN ('work','annual leave','terminated')),
     FOREIGN KEY("jobPositionId") REFERENCES JobPositions("id"),
-    FOREIGN KEY("teamId") REFERENCES Teams("id")
+    FOREIGN KEY("departmentId") REFERENCES Departments("id"),
+    FOREIGN KEY("shopId") REFERENCES Shops("id")
 );
 
 --Represents workers' compensation information
@@ -92,9 +92,9 @@ CREATE TABLE Indemnity(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "employeeId" INTEGER NOT NULL,
     "terminationDate" DATE NOT NULL DEFAULT CURRENT_DATE,
-    "workingDay" INTEGER NOT NULL,
-    "indemnityAmount" NUMERIC NOT NULL CHECK("indemnityAmount" >= 0),
-    FOREIGN KEY("employeeId") REFERENCES "Employees"("id")
+    "workingDay" INTEGER DEFAULT 0,
+    "indemnityAmount" NUMERIC NOT NULL DEFAULT 0 CHECK("indemnityAmount" >= 0),
+    FOREIGN KEY("employeeId") REFERENCES Employees("id")
 );
 
 CREATE TABLE Annual_Leave(
@@ -108,135 +108,271 @@ CREATE TABLE Annual_Leave(
 CREATE TABLE Orders(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "customerId" INTEGER NOT NULL,
-    "productId" INTEGER NOT NULL,
     "shopId" INTEGER NOT NULL,
     "orderDate" DATE NOT NULL DEFAULT CURRENT_DATE,
-    "totalPrice" NUMERIC NOT NULL CHECK("totalPrice" >= 0),
-    "pointUsage" INTEGER NOT NULL DEFAULT 0,
     "employeeId" INTEGER NOT NULL,
-    "orderStatus" VARCHAR(20) NOT NULL CHECK("orderStatus" IN ('delivered','refunded','cancelled')),
     FOREIGN KEY("customerId") REFERENCES Customers("id"),
-    FOREIGN KEY("productId") REFERENCES Products("id"),
     FOREIGN KEY("shopId") REFERENCES Shops("id"),
     FOREIGN KEY("employeeId") REFERENCES Employees("id")
 );
 
+--Products in orders are kept
+CREATE TABLE Order_Item(
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "orderId" INTEGER NOT NULL,
+    "productId" INTEGER NOT NULL,
+    "quantity" INTEGER NOT NULL CHECK("quantity" > 0),
+    "price" NUMERIC NOT NULL CHECK("price" > 0),
+    "orderItemStatus" VARCHAR(20) NOT NULL DEFAULT 'getting ready' CHECK("orderItemStatus" IN ('getting ready','delivered','refunded','cancelled')),
+    FOREIGN KEY("orderId") REFERENCES Orders("id"),
+    FOREIGN KEY("productId") REFERENCES Products("id")
+);
+
 --indexes created
-CREATE INDEX "customer_search" ON "Customers"("name","surname","email");
+CREATE INDEX "customer_search" ON "Customers"("name","surname","email","address");
 CREATE INDEX "product_search" ON "Products"("name");
 CREATE INDEX "city_search" ON "Cities"("name");
 CREATE INDEX "shop_search" ON "Shops"("name");
-CREATE INDEX "employee_search" ON "Employees"("name","surname","email");
+CREATE INDEX "employee_search" ON "Employees"("name","surname","email","address");
 
 --view tables
 
---Represents product category information
-CREATE VIEW "product_category" AS
-SELECT "Products"."id" AS "product_id", "Products"."name" AS "product_name", "Categories"."id" AS "category_id", "Categories"."name" AS "category_name" FROM "Products"
-INNER JOIN "Categories" ON "Products"."categoryId" = "Categories"."id";
+--employee compensation view chart
+CREATE VIEW "employee_indemnity" AS 
+SELECT "Employees"."id" AS "employee_id", "Employees"."name", "Employees"."surname", "Indemnity"."terminationDate", "Indemnity"."workingDay", "Indemnity"."indemnityAmount" FROM "Employees"
+JOIN "Indemnity" ON "Indemnity"."id" = "Employees"."id";
 
---represents store city information
+--table view with order information
+CREATE VIEW "order_content" AS 
+SELECT "Order_Item"."orderId" AS 'order_id', "Order_Item"."productId" AS 'product_id', "Orders"."customerId" AS 'customer_id', "Order_Item"."orderItemStatus",("quantity"*"price") AS "price",SUM("quantity"*"price") AS "total_order_price" FROM "Orders"
+INNER JOIN "Order_Item" ON "Orders"."id" = "Order_Item"."orderId"
+GROUP BY "Order_Item"."id";
+
+
+--table view with order total price
+CREATE VIEW "order_totalprice" AS 
+SELECT "Order_Item"."orderId" AS 'order_id',"Orders"."customerId" AS 'customer_id',SUM("quantity"*"price") AS "total_order_price" FROM "Orders"
+INNER JOIN "Order_Item" ON "Orders"."id" = "Order_Item"."orderId"
+GROUP BY "Order_Item"."orderId";
+
+--view with city store information
 CREATE VIEW "shop_city" AS
 SELECT "Shops"."id" AS "shop_id", "Shops"."name" AS "shop_name", "Cities"."id" AS "city_id", "Cities"."name" AS "city_name" FROM "Shops"
-INNER JOIN "Cities" ON "Shops"."cityId" = "Cities"."id";
+JOIN "Cities" ON "Shops"."cityId" = "Cities"."id";
 
---team represents departmental knowledge
-CREATE VIEW "team_department_city" AS
-SELECT "Teams"."id" AS "team_id", "Teams"."name" AS "team_name", "Departments"."id" AS "department_id", "Departments"."name" AS "department_name", "Departments"."cityId" AS "city_id"  FROM "Teams"
-INNER JOIN "Departments" ON "Teams"."DepartmentId" = "Departments"."id";
+--Shows the leave information used by employees
+CREATE VIEW "employee_annualleave" AS
+SELECT "Employees"."id" AS "employee_id", "Employees"."name", "Employees"."surname", SUM("Annual_Leave"."annualLeaveUsed") AS 'annualLeaveUsed' FROM "Employees"
+JOIN "Annual_Leave" ON "Employees"."id" = "Annual_Leave"."employeeId"
+GROUP BY "Annual_Leave"."employeeId";
 
---Represents employee name, surname, city, job position and team information.
+--Shows employee information
 CREATE VIEW "employee_information" AS 
-SELECT "Employees"."id" AS "employee_id", "Employees"."identificationNumber" AS "identificationNumber", "Employees"."name" AS "employee_name", "Employees"."surname" AS "employee_surname","Cities"."name" AS "home_city", "JobPositions"."name" AS "job_position", "Teams"."name" AS "team_name" FROM "Employees" 
-INNER JOIN "Cities" ON "Employees"."cityId" = "Cities"."id"
-INNER JOIN "JobPositions" ON "Employees"."jobPositionId" = "JobPositions"."id"
-INNER JOIN "Teams" ON "Employees"."teamId" = "Teams"."id";
+SELECT "Employees"."id" AS "employee_id", "Employees"."name", "Employees"."surname", "JobPositions"."name" AS "job_position", "Departments"."name" AS "department_name","Shops"."name" AS 'shop_name', "Employees"."startDate", "Employees"."workingStatus", "Employees"."salary" FROM "Employees" 
+JOIN "JobPositions" ON "Employees"."jobPositionId" = "JobPositions"."id"
+JOIN "Departments" ON "Employees"."departmentId" = "Departments"."id"
+JOIN "Shops" ON "Employees"."shopId" = "Shops"."id"
+WHERE "Employees"."workingStatus" = 'work' OR  "Employees"."workingStatus" = 'annual leave';
 
---Represents employee Indemnity information
-CREATE VIEW "employee_indemnity" AS
-SELECT "Employees"."id" AS "employee_id", "Employees"."name" AS "employee_name", "Employees"."surname" AS "employee_surname", "Indemnity"."id" AS "indemnity_id", "Indemnity"."indemnityAmount" AS "indemnity_amount" FROM "Employees"
-INNER JOIN "Indemnity" ON "Employees"."id" = "Indemnity"."employeeId";
+--shows order information 
+CREATE VIEW "order_information" AS 
+SELECT "Orders"."id" AS "order_id", "Customers"."id" AS "customer_id" ,"Customers"."name" AS "customer_name", "Shops"."id" AS "shop_id", "Shops"."name" AS "shop_name", "Employees"."id" AS "employee_id" ,"Employees"."name" AS "employee_name",SUM("quantity"*"price") AS "total_order_price" FROM "Orders"
+JOIN "Customers" ON "Orders"."customerId" = "Customers"."id"
+JOIN "Shops" ON "Orders"."shopId" = "Shops"."id"
+JOIN "Employees" ON "Orders"."employeeId" = "Employees"."id"
+JOIN "Order_Item" ON "Orders"."id" = "Order_Item"."OrderId";
 
---Represents order id, customer name, product name, store name, employee name information
-CREATE VIEW "order_imformation" AS 
-SELECT "Orders"."id" AS "order_id", "Customers"."id" AS "customer_id" ,"Customers"."name" AS "customer_name", "Products"."id" AS "product_id", "Products"."name" AS "product_name", "Shops"."id" AS "shop_id", "Shops"."name" AS "shop_name", "Employees"."name" AS "employee_id" ,"Employees"."name" AS "employee_name" FROM "Orders"
-INNER JOIN "Customers" ON "Orders"."customerId" = "Customers"."id"
-INNER JOIN "Products" ON "Orders"."productId" = "Products"."id"
-INNER JOIN "Shops" ON "Orders"."shopId" = "Shops"."id"
-INNER JOIN "Employees" ON "Orders"."employeeId" = "Employees"."id";
+--lists product information
+CREATE VIEW "product_details" AS
+SELECT "Products"."id" AS "product_id","Products"."name" AS "product_name", "Products"."stock", "Products"."price" , "Products"."productStatus" , "Trademarks"."name" AS "trademark_name", "Categories"."name" AS "category_name" FROM "Products"
+JOIN "Trademarks" ON "Trademarks"."id" = "Products"."trademarkId"
+JOIN "Categories" ON "Categories"."id" = "Products"."categoryId";
 
 --TRIGGERS
 
---Pre-sale stock control warns you that if stock is not sufficient, the transaction will not go through.
-CREATE TRIGGER 	sales_stock_control
-BEFORE INSERT ON "Orders"
-FOR EACH ROW
-WHEN (SELECT "stock" FROM  "Products" WHERE "id" = NEW.productId) = 0
+--Checks whether the Shop is active or not
+CREATE TRIGGER employee_active_shop_control
+BEFORE INSERT ON Employees
+FOR EACH ROW 
+WHEN NEW.shopId IN (SELECT "id" FROM "Shops" WHERE "shopStatus" != 'active') 
 BEGIN
-    SELECT RAISE (ABORT,'stock is not enough');
+    SELECT RAISE(ABORT,'store is not active');
 END;
 
---Pre-sale score control warns you that if the score is not sufficient, the transaction will not be carried out.
-CREATE TRIGGER sales_point_control
-BEFORE INSERT ON "Orders"
+--If there is no department it gives an error
+CREATE TRIGGER employee_department_control
+BEFORE INSERT ON Employees
 FOR EACH ROW
-WHEN (SELECT "point" FROM "Customers" WHERE "id" = NEW.customerId) < NEW.pointUsage
+WHEN NEW.departmentId NOT IN (SELECT "id" FROM "Departments")
 BEGIN
-    SELECT RAISE (ABORT,'point are not enough');
+    SELECT RAISE(ABORT,'department does not exist');
 END;
 
---store activity control
-CREATE TRIGGER sales_shop_control
-BEFORE INSERT ON "Orders"
+--If there is no job position it gives an error
+CREATE TRIGGER employee_jobPosition_control
+BEFORE INSERT ON Employees
 FOR EACH ROW
-WHEN (SELECT "shopStatus" FROM "Shops" WHERE id = NEW.shopId) = "repair" OR (SELECT "shopStatus" FROM "Shops" WHERE id = NEW.shopId) = "not active" 
+WHEN NEW.jobPositionId NOT IN (SELECT "id" FROM "JobPositions")
 BEGIN
-    SELECT RAISE(ABORT,'shop is not active');
+    SELECT RAISE(ABORT,'job position not available');
 END;
 
---Makes additions to necessary tables after sales (Stok-1),(numberofSales+1),(point-pointusage),("orderStatus"="delivered")
-CREATE TRIGGER after_sale
-AFTER INSERT ON "Orders"
-FOR EACH ROW
+
+--Checks if there is a store or not
+CREATE TRIGGER employee_shop_control
+BEFORE INSERT ON Employees
+FOR EACH ROW 
+WHEN NEW.shopId NOT IN (SELECT "id" FROM Shops)
 BEGIN
-    UPDATE "Products" SET "stock" = stock-1 WHERE "id" = NEW.productId;
-    UPDATE "Employees" SET "numberofSales" = numberofSales+1 WHERE "id" = NEW.employeeId;
-    UPDATE "Customers" SET "point" = point-NEW.pointUsage WHERE "id" = NEW.customerId;
-    UPDATE "Orders" SET "orderStatus" = "delivered" WHERE "id" = NEW.id;
-    UPDATE "Customers" SET "point" = (NEW.totalPrice*0.01) + point WHERE "id" = NEW.customerId;
+    SELECT RAISE(ABORT,'There is no such store');
 END;
 
---Changes stock status when product is out of stock
-CREATE TRIGGER product_stock
-AFTER UPDATE OF "stock" ON "Products"
+--performs employee control
+CREATE TRIGGER annual_leave_employee_check
+BEFORE INSERT ON Annual_Leave
 FOR EACH ROW
-WHEN (SELECT "stock" FROM  "Products" WHERE id = NEW.id) = 0
+WHEN NEW.employeeId NOT IN (SELECT "id" FROM Employees) OR (SELECT "workingStatus" FROM "Employees" WHERE "id" = NEW.employeeId) = 'terminated'
 BEGIN
-    UPDATE "Products" SET "productStatus" = "stock expected" WHERE id = NEW.id;
+    SELECT RAISE(ABORT,'There is no such employee');
 END;
 
---employee changes work status when leaving work
-CREATE TRIGGER indemnity_employee
-AFTER INSERT ON Indemnity
-FOR EACH ROW
-BEGIN 
-    UPDATE "Employees" SET "workingStatus" = "terminated" WHERE id = NEW.employeeId;
-END;
-
---control when taking annual leave
+--Checks whether the employee has enough leave to use
 CREATE TRIGGER annual_leave_check
 BEFORE INSERT ON Annual_Leave
 FOR EACH ROW
-WHEN NEW.annualLeaveUsed > (SELECT "annualLeave" FROM "Employees" WHERE id = NEW.employeeId)
+WHEN  NEW.annualLeaveUsed > (SELECT "annualLeave" FROM "Employees" WHERE "id" = NEW.employeeId) OR NEW.annualLeaveUsed = 0
 BEGIN
-    SELECT RAISE (ABORT,'annual leave is insufficient');
+    SELECT RAISE(ABORT,'The employee does not have enough leaves or the number of leaves is 0 entered');
 END;
 
---updates required columns when annual leave is used
+
+--When annual leave is used, it is deducted from your annual leave.
 CREATE TRIGGER 	use_annual_leave
 AFTER INSERT ON Annual_Leave
 FOR EACH ROW
 BEGIN
-    UPDATE "Employees" SET "annualLeave" = annualLeave-NEW.annualLeaveUsed WHERE id = NEW.employeeId;
-    UPDATE "Employees" SET "workingStatus" = "annual leave" WHERE id = NEW.employeeId;
+    UPDATE "Employees" SET "annualLeave" = annualLeave-NEW.annualLeaveUsed,"workingStatus" = 'annual leave' 
+    WHERE "id" = NEW.employeeId;
+END;
+
+--Checks the employee and his/her status when the employee is leaving
+CREATE TRIGGER indemnity_employee_controls
+BEFORE INSERT ON Indemnity
+FOR EACH ROW
+WHEN NEW.employeeId IN (SELECT "id" FROM "Employees" WHERE "workingStatus" = 'terminated')
+     OR NEW.employeeId NOT IN (SELECT "id" FROM "Employees")
+BEGIN 
+    SELECT RAISE(ABORT,'the employee has already left or no such employee exists');
+END;
+
+--When the employee leaves the job, the job status changes to terminated
+CREATE TRIGGER indemnity_employee_workstatus
+AFTER INSERT ON Indemnity
+FOR EACH ROW
+BEGIN 
+    UPDATE "Employees" SET "workingStatus" = 'terminated' WHERE "id" = NEW.employeeId;
+END;
+
+--Checks if the store is active
+CREATE TRIGGER sales_shop_active_control
+BEFORE INSERT ON "Orders"
+FOR EACH ROW
+WHEN (SELECT "shopStatus" FROM "Shops" WHERE "id" = NEW.shopId) != 'active' 
+BEGIN
+    SELECT RAISE(ABORT,'store is not active');
+END;
+
+--Checks if there is a store or not
+CREATE TRIGGER sales_shop_control
+BEFORE INSERT ON "Orders"
+FOR EACH ROW
+WHEN NEW.shopId NOT IN (SELECT "id" FROM "Shops")
+BEGIN
+    SELECT RAISE(ABORT,'There is no such store');
+END;
+
+--Checks the status of the employee while making a sale
+CREATE TRIGGER sales_employee_control
+BEFORE INSERT ON "Orders"
+FOR EACH ROW
+WHEN (SELECT "workingStatus" FROM "Employees" WHERE "id" = NEW.employeeId) != 'work' 
+OR NEW.employeeId NOT IN (SELECT "id" FROM Employees)
+BEGIN
+    SELECT RAISE(ABORT,'There does not appear to be such an employee');
+END;
+
+--Checks whether there is a customer or not
+CREATE TRIGGER sales_customer_control
+BEFORE INSERT ON "Orders"
+FOR EACH ROW
+WHEN  NEW.customerId NOT IN (SELECT "id" FROM Customers)
+      OR (SELECT "deleted" FROM "Customers" WHERE "id" = NEW.customerId) = 1
+BEGIN
+    SELECT RAISE (ABORT,'customer does not exist');
+END;
+
+--Checks whether the product is available or not
+CREATE TRIGGER product_control
+BEFORE INSERT ON Order_Item
+FOR EACH ROW
+WHEN NEW.productId NOT IN (SELECT "id" FROM "Products") OR 'sale' != (SELECT "productStatus" FROM "Products" WHERE "id" = NEW.productId)
+BEGIN 
+    SELECT RAISE (ABORT,'such a product is not on sale');
+END;
+
+--Checks product stock status
+CREATE TRIGGER product_stock_control
+BEFORE INSERT ON Order_Item
+FOR EACH ROW
+WHEN(SELECT "stock" FROM "Products" WHERE "id" = NEW.productId) < NEW.quantity
+BEGIN 
+    SELECT RAISE (ABORT,'no product stock');
+END;
+
+--Refunds canceled or returned orders
+CREATE TRIGGER order_cancellation_refund_procedures
+AFTER UPDATE OF "orderItemStatus" ON Order_Item
+FOR EACH ROW
+WHEN NEW.orderItemStatus = 'cancelled'
+BEGIN
+    UPDATE "Products" SET "stock" = stock + NEW.quantity WHERE "id" = (SELECT "productId" FROM "Order_Item" WHERE "orderId" = NEW.orderId AND "id" = NEW.id);
+END;
+
+
+CREATE TRIGGER order_delivery_transactions
+AFTER UPDATE OF "orderItemStatus" ON Order_Item
+FOR EACH ROW
+WHEN NEW.orderItemStatus = 'delivered'
+BEGIN
+    UPDATE "Products" SET "stock" = "stock" - NEW.quantity WHERE "id" = NEW.productId;
+END;
+
+--Changes order status if product is out of stock after sale
+CREATE TRIGGER product_stock_end
+AFTER UPDATE OF "stock" ON Products
+FOR EACH ROW
+WHEN NEW.stock = 0
+BEGIN
+    UPDATE "Products" SET "productStatus" = 'stock expected' 
+    WHERE "id" = NEW.id;
+END;
+
+--When product stock is added
+CREATE TRIGGER adding_product_stock
+AFTER UPDATE OF "stock" ON Products
+FOR EACH ROW
+WHEN NEW.stock > 0
+BEGIN
+    UPDATE "Products" SET "productStatus" = 'sale' 
+    WHERE "id" = NEW.id;
+END;
+
+
+--When the ordered products are delivered
+CREATE TRIGGER order_state_update
+AFTER INSERT ON Order_Item
+BEGIN
+  UPDATE Order_Item
+  SET "orderItemStatus" = 'delivered'
+  WHERE orderId = NEW.orderId AND productId = NEW.productId;
 END;
