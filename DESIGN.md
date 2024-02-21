@@ -2,7 +2,7 @@
 
 By Muhammed Ahmet Sekerci
 
-Video overview: <[URL HERE](https://www.youtube.com/watch?v=4YJtizONyW8)>
+Video overview: https://www.youtube.com/watch?v=4YJtizONyW8
 
 ## Scope
 
