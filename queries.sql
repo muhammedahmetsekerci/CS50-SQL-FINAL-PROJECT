@@ -136,7 +136,6 @@ INSERT INTO Trademarks("name") VALUES ('Apple');
 INSERT INTO Trademarks("name") VALUES ('Samsung');
 
 INSERT INTO Products("name","stock","categoryId","trademarkId","price","productStatus") VALUES ('Notebook',10,2,1,1000,'sale');
-INSERT INTO Products("name","stock","categoryId","trademarkId","price","productStatus") VALUES ('Notebook',10,2,1,1000,'sale');
 INSERT INTO Products("name","stock","categoryId","trademarkId","price","productStatus") VALUES ('Iphone 15',10,1,3,1500,'sale');
 INSERT INTO Products("name","stock","categoryId","trademarkId","price","productStatus") VALUES ('Samsung TV',5,3,4,5000,'sale');
 UPDATE Products SET "stock" = "stock" + 15 WHERE "id" = 1;
@@ -176,7 +175,7 @@ INSERT INTO Employees("identificationNumber","name","surname","gender","phoneNum
 INSERT INTO Employees("identificationNumber","name","surname","gender","phoneNumber","email","address","jobPositionId","departmentId","shopId","salary","workingStatus") VALUES  ('GB901234', 'Ethan', 'Clark', 'Male', '555555987', 'ethan.clark@example.com', '606 Pine Road, Houston', 6, 4, 4, 5900, 'work');
 INSERT INTO Employees("identificationNumber","name","surname","gender","phoneNumber","email","address","jobPositionId","departmentId","shopId","salary","workingStatus") VALUES  ('GB012345', 'Mia', 'Miller', 'Female', '555555120', 'mia.miller@example.com', '707 Cedar Lane, Houston', 7, 4, 4, 5400, 'work');
 UPDATE Employees SET "workingStatus" = 'work' WHERE id=1;
-UPDATE Employees SET "annualLeave" = 15 WHERE "id" = 1;
+UPDATE Customers SET "deleted" = 1 WHERE "id" = 1;
 
 INSERT INTO Orders ("customerId","shopId","employeeId") VALUES (1,1,1);
 INSERT INTO Order_Item("orderId","productId","quantity","price") VALUES (1,1,1,1000);

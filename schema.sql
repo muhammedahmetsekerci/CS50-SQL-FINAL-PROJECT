@@ -68,11 +68,11 @@ CREATE TABLE JobPositions(
 --represents employees
 CREATE TABLE Employees(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "identificationNumber" TEXT UNIQUE NOT NULL CHECK("identificationNumber" GLOB '*[0-9]*'),
+    "identificationNumber" TEXT UNIQUE NOT NULL,
     "name" VARCHAR(50) NOT NULL,
     "surname" VARCHAR(50) NOT NULL,
     "gender" VARCHAR(15) NOT NULL,
-    "phoneNumber" TEXT NOT NULL UNIQUE,
+    "phoneNumber" TEXT NOT NULL UNIQUE  CHECK("phoneNumber" GLOB '*[0-9]*'),
     "email" TEXT NOT NULL UNIQUE CHECK("email" LIKE '%@%'),
     "address" VARCHAR(70) NOT NULL,
     "jobPositionId" INTEGER NOT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE Employees(
     "shopId" INTEGER NOT NULL,
     "startDate" DATE NOT NULL DEFAULT CURRENT_DATE,
     "salary" NUMERIC NOT NULL CHECK("salary" > 0),
-    "annualLeave" INTEGER NOT NULL DEFAULT 0,
+    "annualLeave" INTEGER NOT NULL DEFAULT 0 CHECK("annualLeave" >= 0),
     "workingStatus" VARCHAR(10) NOT NULL DEFAULT 'work' CHECK("workingStatus" IN ('work','annual leave','terminated')),
     FOREIGN KEY("jobPositionId") REFERENCES JobPositions("id"),
     FOREIGN KEY("departmentId") REFERENCES Departments("id"),
@@ -92,15 +92,15 @@ CREATE TABLE Indemnity(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "employeeId" INTEGER NOT NULL,
     "terminationDate" DATE NOT NULL DEFAULT CURRENT_DATE,
-    "workingDay" INTEGER DEFAULT 0,
-    "indemnityAmount" NUMERIC NOT NULL DEFAULT 0 CHECK("indemnityAmount" >= 0),
+    "workingDay" INTEGER NOT NULL CHECK("workingDay" > 0),
+    "indemnityAmount" NUMERIC NOT NULL CHECK("indemnityAmount" >= 0),
     FOREIGN KEY("employeeId") REFERENCES Employees("id")
 );
 
 CREATE TABLE Annual_Leave(
     "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "employeeId" INTEGER NOT NULL,
-    "annualLeaveUsed" int NOT NULL,
+    "annualLeaveUsed" INTEGER NOT NULL,
     FOREIGN KEY("employeeId") REFERENCES "Employees"("id")
 );
 
@@ -160,7 +160,7 @@ CREATE VIEW "shop_city" AS
 SELECT "Shops"."id" AS "shop_id", "Shops"."name" AS "shop_name", "Cities"."id" AS "city_id", "Cities"."name" AS "city_name" FROM "Shops"
 JOIN "Cities" ON "Shops"."cityId" = "Cities"."id";
 
---Shows the leave information used by employees
+--Shows employee leave usage information
 CREATE VIEW "employee_annualleave" AS
 SELECT "Employees"."id" AS "employee_id", "Employees"."name", "Employees"."surname", SUM("Annual_Leave"."annualLeaveUsed") AS 'annualLeaveUsed' FROM "Employees"
 JOIN "Annual_Leave" ON "Employees"."id" = "Annual_Leave"."employeeId"
