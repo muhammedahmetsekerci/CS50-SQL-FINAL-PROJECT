@@ -253,4 +253,4 @@ The entity relationship diagram below describes the relationships between entiti
 </ul>
  This database may not represent the detailed databases of large technology companies, but it was designed with inspiration from them.
 
-
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fmuhammedahmetsekerci%2FCS50-SQL-FINAL-PROJECT&count_bg=%23A41034&title_bg=%233D3D3D&icon=&icon_color=%23A41034&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
