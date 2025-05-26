@@ -1,5 +1,9 @@
 # CS50-SQL-FINAL-PROJECT
 <a href="https://drive.google.com/file/d/1hMLdIjNCOwN-NCuetewx-gsN5mixDDKY/view?usp=drive_link">Certificate</a>
+
+[![Repo](https://img.shields.io/badge/View-CS50_SQL_Repo-181717?logo=github&logoColor=white)](https://github.com/muhammedahmetsekerci/CS50-SQL) <br>
+▶️ [How to Set Up CS50 – My Video](https://youtu.be/bpUzYV2dnRA) <br>
+
 # Design Document
 
 By Muhammed Ahmet Sekerci
